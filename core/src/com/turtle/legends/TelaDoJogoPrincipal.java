@@ -3,6 +3,7 @@ package com.turtle.legends;
 import java.util.Iterator;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
@@ -29,6 +30,8 @@ public class TelaDoJogoPrincipal implements Screen {
     Array<Rectangle> raindrops;
     long lastDropTime;
     int dropsGathered;
+    boolean paused = false;
+    boolean winner = false;
 
     public TelaDoJogoPrincipal(final Drop game, String comida, String personagem, String somDrop) {
         this.game = game;
@@ -86,19 +89,36 @@ public class TelaDoJogoPrincipal implements Screen {
         // begin a new batch and draw the bucket and
         // all drops
         game.batch.begin();
+        if (dropsGathered >= 3) {
+            game.font.draw(game.batch, "VENCEDOR!", 540, 400);// Mensagem de vencedor no centro
+        } else {
         game.font.draw(game.batch, "Score: " + dropsGathered, 0, 720);
+        }
+        game.font.draw(game.batch, paused ? "PAUSED" : "", 600, 700);
         game.batch.draw(bucketImage, bucket.x, bucket.y, bucket.width, bucket.height);
         for (Rectangle raindrop : raindrops) {
             game.batch.draw(dropImage, raindrop.x, raindrop.y);
         }
         game.batch.end();
 
-        if (Gdx.input.isKeyPressed(Keys.LEFT))
+        if (Gdx.input.isKeyPressed(Keys.LEFT) || Gdx.input.isKeyPressed(Keys.A))
             bucket.x -= 600 * Gdx.graphics.getDeltaTime();
-        if (Gdx.input.isKeyPressed(Keys.RIGHT))
+        if (Gdx.input.isKeyPressed(Keys.RIGHT) || Gdx.input.isKeyPressed(Keys.D))
             bucket.x += 600 * Gdx.graphics.getDeltaTime();
+        if (Gdx.input.isKeyPressed(Keys.ENTER)) {
+            game.setScreen(new CharacterSelectionScreen(game));
+            dispose();
+        }
+        if (Gdx.input.isKeyJustPressed(Keys.BACKSPACE)) {
+            paused = !paused;
+            if (paused) {
+                rainMusic.pause();
+            } else {
+                rainMusic.play();
+            }
+        }
+        if (dropsGathered >= 3 || paused) return;
 
-        // make sure the bucket stays within the screen bounds
         if (bucket.x < 0)
             bucket.x = 0;
         if (bucket.x > 1280 - 64)
@@ -108,9 +128,6 @@ public class TelaDoJogoPrincipal implements Screen {
         if (TimeUtils.nanoTime() - lastDropTime > 1000000000)
             spawnRaindrop();
 
-        // move the raindrops, remove any that are beneath the bottom edge of
-        // the screen or that hit the bucket. In the later case we increase the
-        // value our drops counter and add a sound effect.
         Iterator<Rectangle> iter = raindrops.iterator();
         while (iter.hasNext()) {
             Rectangle raindrop = iter.next();
